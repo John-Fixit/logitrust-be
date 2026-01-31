@@ -31,10 +31,11 @@ fs.readdirSync(__dirname)
     );
   })
   .forEach((file) => {
-    const model = require(path.join(__dirname, file))(
-      sequelize,
-      Sequelize.DataTypes,
-    );
+    const modelFilePath = path.join(__dirname, file);
+    const modelExport = require(modelFilePath);
+    if (typeof modelExport !== "function") return; //this means the file is empty
+
+    const model = modelExport(sequelize, Sequelize.DataTypes);
     db[model.name] = model;
   });
 
