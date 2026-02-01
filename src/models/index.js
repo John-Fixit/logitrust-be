@@ -2,11 +2,12 @@
 
 const fs = require("fs");
 const path = require("path");
-const Sequelize = require("sequelize");
+const { Sequelize, DataTypes } = require("sequelize");
 const process = require("process");
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || "development";
 const config = require(__dirname + "/../config/config.js")[env];
+
 const db = {};
 
 let sequelize;
@@ -35,7 +36,7 @@ fs.readdirSync(__dirname)
     const modelExport = require(modelFilePath);
     if (typeof modelExport !== "function") return; //this means the file is empty
 
-    const model = modelExport(sequelize, Sequelize.DataTypes);
+    const model = modelExport(sequelize, DataTypes);
     db[model.name] = model;
   });
 
