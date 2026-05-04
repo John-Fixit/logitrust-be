@@ -34,7 +34,6 @@ const loginAccount = async (req, res) => {
 };
 
 const verifyEmail = async (req, res) => {
-  console.log(req.body, "req.body");
   try {
     const payload = await userService.verifyEmail(req.body.token);
     return ApiResponse.success(
