@@ -1,0 +1,76 @@
+"use strict";
+
+module.exports = (sequelize, DataTypes) => {
+  const Shipment = sequelize.define(
+    "Shipment",
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      tracking_code: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
+      rider_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      interstate_driver_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      pickup_location: { type: DataTypes.STRING, allowNull: false },
+      dropoff_location: { type: DataTypes.STRING, allowNull: false },
+      recipient_name: { type: DataTypes.STRING, allowNull: false },
+      recipient_phone: { type: DataTypes.STRING, allowNull: false },
+      item_description: { type: DataTypes.TEXT, allowNull: true },
+      category: { type: DataTypes.STRING, allowNull: true },
+      weight: { type: DataTypes.DECIMAL(10, 2), allowNull: true },
+      item_value: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+      delivery_type: { type: DataTypes.STRING, allowNull: false },
+      payment_status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "Escrowed",
+      },
+      status: { type: DataTypes.STRING, allowNull: false, defaultValue: "pending" },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      },
+    },
+    {
+      tableName: "shipments",
+      timestamps: false,
+      underscored: true,
+    },
+  );
+
+  Shipment.associate = (models) => {
+    Shipment.belongsTo(models.User, { foreignKey: "user_id", as: "sender" });
+    Shipment.belongsTo(models.Rider, { foreignKey: "rider_id", as: "rider" });
+    Shipment.belongsTo(models.InterstateDriver, {
+      foreignKey: "interstate_driver_id",
+      as: "interstate_driver",
+    });
+    Shipment.hasMany(models.ShipmentStatusHistory, {
+      foreignKey: "shipment_id",
+      as: "status_history",
+    });
+    Shipment.hasMany(models.TrackingEvent, {
+      foreignKey: "shipment_id",
+      as: "tracking_events",
+    });
+    Shipment.hasOne(models.Escrow, { foreignKey: "shipment_id", as: "escrow" });
+  };
+
+  return Shipment;
+};

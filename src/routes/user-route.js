@@ -1,8 +1,11 @@
 const router = require("express").Router();
+const { requireAuth, requireRoles } = require("../middleware/auth.middleware");
+const {
+  getAllUsers,
+  getUserById,
+} = require("../controllers/user/user.controller");
 
-router.get("/", (req, res) => {
-  console.log("Hello world");
-  res.json({ message: "Application responding", status: true });
-});
+router.get("/", requireAuth, requireRoles("admin"), getAllUsers);
+router.get("/:id", requireAuth, getUserById);
 
 module.exports = router;

@@ -1,46 +1,45 @@
-const express = require("express");
-const app = express();
 require("dotenv").config();
-const PORT = process.env.PORT || 8002;
-const routers = require("./routes/index");
-
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const errorHandler = require("./middleware/errorHandler");
+const app = require("./app");
 const db = require("./models");
 
-app.use(
-  cors({
-    origin: "*",
-  }),
-);
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+const PORT = process.env.PORT || 8002;
 
-app.get("/test", (req, res) => {
-  res.json({ message: "app on", status: true });
-});
+const cleanLegacyDuplicateEmailIndexes = async () => {
+  const [indexes] = await db.sequelize.query("SHOW INDEX FROM users");
+  const duplicateEmailIndexes = indexes
+    .map((index) => index.Key_name)
+    .filter(
+      (keyName) =>
+        keyName &&
+        keyName !== "PRIMARY" &&
+        (keyName === "email" || keyName.startsWith("email_")),
+    );
 
-app.use("/api", routers);
-
-app.use(errorHandler); //error handler config globally
+  // Keep one unique email index, drop extras that accumulated via sync({ alter: true }).
+  const indexesToDrop = duplicateEmailIndexes.slice(1);
+  for (const indexName of indexesToDrop) {
+    await db.sequelize.query(`ALTER TABLE users DROP INDEX \`${indexName}\`;`);
+  }
+};
 
 const startServer = async () => {
   try {
     await db.sequelize.authenticate();
     console.log("DB connected successfully");
 
-    // if (process.env.NODE_ENV === "development") {
-    await db.sequelize.sync({ alter: true });
-    console.log("DB syncronized");
-    // }
+    if (process.env.NODE_ENV === "production") {
+      console.log("Skipping Sequelize sync in production (use migrations).");
+    } else if (process.env.SYNC_DB !== "false") {
+      await cleanLegacyDuplicateEmailIndexes();
+      await db.sequelize.sync({ alter: true });
+      console.log("DB synchronized (non-production; set SYNC_DB=false to skip)");
+    }
 
-    //startign the server here
     app.listen(PORT, () => {
       console.log(`App starting on port: ${PORT}`);
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     process.exit(1);
   }
 };

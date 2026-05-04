@@ -1,8 +1,8 @@
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
-  const Dispute = sequelize.define(
-    "Dispute",
+  const DeliveryTracking = sequelize.define(
+    "DeliveryTracking",
     {
       id: {
         type: DataTypes.UUID,
@@ -10,28 +10,28 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
       },
       delivery_id: { type: DataTypes.UUID, allowNull: false },
-      reason: { type: DataTypes.TEXT, allowNull: false },
-      status: { type: DataTypes.STRING, allowNull: false, defaultValue: "open" },
-      admin_note: { type: DataTypes.TEXT, allowNull: true },
-      created_at: {
+      latitude: { type: DataTypes.DECIMAL(10, 7), allowNull: false },
+      longitude: { type: DataTypes.DECIMAL(10, 7), allowNull: false },
+      status: { type: DataTypes.STRING, allowNull: false },
+      timestamp: {
         type: DataTypes.DATE,
         allowNull: false,
         defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
       },
     },
     {
-      tableName: "disputes",
+      tableName: "delivery_tracking",
       timestamps: false,
       underscored: true,
     },
   );
 
-  Dispute.associate = (models) => {
-    Dispute.belongsTo(models.Delivery, {
+  DeliveryTracking.associate = (models) => {
+    DeliveryTracking.belongsTo(models.Delivery, {
       foreignKey: "delivery_id",
       as: "delivery",
     });
   };
 
-  return Dispute;
+  return DeliveryTracking;
 };

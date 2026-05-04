@@ -1,0 +1,30 @@
+module.exports = [
+  { path: "wallets", model: "Wallet", label: "wallet" },
+  {
+    path: "wallet-transactions",
+    model: "WalletTransaction",
+    label: "wallet transaction",
+  },
+  { path: "shipments", model: "Shipment", label: "shipment" },
+  {
+    path: "shipment-status-history",
+    model: "ShipmentStatusHistory",
+    label: "shipment status history",
+  },
+  { path: "tracking-events", model: "TrackingEvent", label: "tracking event" },
+  { path: "escrow", model: "Escrow", label: "escrow" },
+  { path: "payments", model: "Payment", label: "payment" },
+  { path: "riders", model: "Rider", label: "rider" },
+  {
+    path: "interstate-drivers",
+    model: "InterstateDriver",
+    label: "interstate driver",
+  },
+  { path: "deliveries", model: "Delivery", label: "delivery" },
+  { path: "delivery-packages", model: "DeliveryPackage", label: "delivery package" },
+  { path: "delivery-tracking", model: "DeliveryTracking", label: "delivery tracking" },
+  { path: "handoff-details", model: "HandoffDetail", label: "handoff detail" },
+  { path: "call-logs", model: "CallLog", label: "call log" },
+  { path: "ratings", model: "Rating", label: "rating" },
+  { path: "disputes", model: "Dispute", label: "dispute" },
+];
