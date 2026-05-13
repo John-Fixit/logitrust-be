@@ -5,7 +5,6 @@ const swaggerUi = require("swagger-ui-express");
 const routers = require("./routes");
 const errorHandler = require("./middleware/errorHandler");
 const { getOpenApiSpec } = require("./docs/openapi");
-const { sendMail } = require("./utils/mailer");
 
 const app = express();
 

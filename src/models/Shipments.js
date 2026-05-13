@@ -32,15 +32,38 @@ module.exports = (sequelize, DataTypes) => {
       recipient_phone: { type: DataTypes.STRING, allowNull: false },
       item_description: { type: DataTypes.TEXT, allowNull: true },
       category: { type: DataTypes.STRING, allowNull: true },
-      weight: { type: DataTypes.DECIMAL(10, 2), allowNull: true },
+      size_tier: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        comment:
+          "Customer-selected package tier (see domain/shipment/size-tier.js)",
+      },
+      weight: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+        comment: "Representative kg derived from size_tier at creation",
+      },
       item_value: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+      package_photo_url: {
+        type: DataTypes.STRING(2048),
+        allowNull: true,
+      },
       delivery_type: { type: DataTypes.STRING, allowNull: false },
       payment_status: {
         type: DataTypes.STRING,
         allowNull: false,
         defaultValue: "Escrowed",
       },
-      status: { type: DataTypes.STRING, allowNull: false, defaultValue: "pending" },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: "pending",
+      },
+      is_draft: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,
