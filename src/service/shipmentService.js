@@ -15,6 +15,16 @@ const normalizeStatusForUi = (status) => {
   return "Pending";
 };
 
+/** Supports legacy string columns and `{ name, lat, long }` JSON. */
+const formatLocationLabel = (location) => {
+  if (location == null) return "";
+  if (typeof location === "string") return location;
+  if (typeof location === "object" && location.name != null) {
+    return String(location.name);
+  }
+  return String(location);
+};
+
 const normalizeVehicleTypeForUi = (vehicleType) => {
   if (!vehicleType) return null;
   const s = String(vehicleType).toLowerCase();
@@ -69,7 +79,7 @@ class ShipmentService {
       await shipmentDao.addTrackingEvent(
         {
           shipment_id: created.id,
-          location: body.pickupAddress,
+          location: formatLocationLabel(body.pickupAddress),
           event: "Shipment created",
         },
         transaction,
@@ -195,7 +205,7 @@ class ShipmentService {
         current: st === "pending",
         completed: true,
         title: "Shipment Created",
-        description: `Pickup: ${plain.pickup_location}`,
+        description: `Pickup: ${formatLocationLabel(plain.pickup_location)}`,
       },
       {
         current: st === "in_transit",
@@ -207,7 +217,7 @@ class ShipmentService {
         current: st === "delivered",
         completed: st === "delivered",
         title: "Delivered",
-        description: `Drop-off: ${plain.dropoff_location}`,
+        description: `Drop-off: ${formatLocationLabel(plain.dropoff_location)}`,
       },
     ];
   }
@@ -242,10 +252,12 @@ class ShipmentService {
         name: plain.recipient_name,
         phone: plain.recipient_phone,
       },
-      from: plain.pickup_location,
-      to: plain.dropoff_location,
+      from: formatLocationLabel(plain.pickup_location),
+      to: formatLocationLabel(plain.dropoff_location),
       deliveryType: plain.delivery_type || "standard",
       riderAssigned,
+      pickupLocation: plain.pickup_location,
+      dropoffLocation: plain.dropoff_location,
       rider: riderAssigned
         ? {
             avatar: "",

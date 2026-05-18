@@ -82,6 +82,33 @@ const cleanDuplicateIndexesByColumnSignature = async (tableName) => {
   }
 };
 
+/**
+ * Rows left after manual deletes or failed alters block adding shipment FKs.
+ * Dev-only hygiene before sync({ alter: true }).
+ */
+const cleanOrphanShipmentChildRows = async () => {
+  const tables = [
+    "shipment_status_history",
+    "tracking_events",
+    "escrow",
+  ];
+  for (const table of tables) {
+    try {
+      const [, meta] = await db.sequelize.query(
+        `DELETE t FROM \`${table}\` t
+         LEFT JOIN \`shipments\` s ON t.shipment_id = s.id
+         WHERE s.id IS NULL`,
+      );
+      const removed = meta?.affectedRows ?? 0;
+      if (removed > 0 && process.env.NODE_ENV !== "test") {
+        console.log(`[DB] Removed ${removed} orphan row(s) from ${table}`);
+      }
+    } catch {
+      // Table may not exist yet on first boot
+    }
+  }
+};
+
 const cleanDuplicateIndexesAllModels = async () => {
   const seen = new Set();
   for (const name of Object.keys(db)) {
@@ -103,6 +130,7 @@ const startServer = async () => {
     } else if (process.env.SYNC_DB !== "false") {
       await cleanLegacyDuplicateEmailIndexes();
       await cleanDuplicateIndexesAllModels();
+      await cleanOrphanShipmentChildRows();
       await db.sequelize.sync({ alter: true });
       console.log(
         "DB synchronized (non-production; set SYNC_DB=false to skip)",

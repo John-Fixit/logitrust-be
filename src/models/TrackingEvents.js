@@ -29,6 +29,8 @@ module.exports = (sequelize, DataTypes) => {
     TrackingEvent.belongsTo(models.Shipment, {
       foreignKey: "shipment_id",
       as: "shipment",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     });
   };
 

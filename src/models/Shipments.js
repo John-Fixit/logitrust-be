@@ -26,8 +26,15 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.UUID,
         allowNull: true,
       },
-      pickup_location: { type: DataTypes.STRING, allowNull: false },
-      dropoff_location: { type: DataTypes.STRING, allowNull: false },
+      /** `{ name, lat, long }` — use JSON (MySQL); not JSONB (PostgreSQL-only). */
+      pickup_location: {
+        type: DataTypes.JSON,
+        allowNull: false,
+      },
+      dropoff_location: {
+        type: DataTypes.JSON,
+        allowNull: false,
+      },
       recipient_name: { type: DataTypes.STRING, allowNull: false },
       recipient_phone: { type: DataTypes.STRING, allowNull: false },
       item_description: { type: DataTypes.TEXT, allowNull: true },
@@ -87,12 +94,21 @@ module.exports = (sequelize, DataTypes) => {
     Shipment.hasMany(models.ShipmentStatusHistory, {
       foreignKey: "shipment_id",
       as: "status_history",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     });
     Shipment.hasMany(models.TrackingEvent, {
       foreignKey: "shipment_id",
       as: "tracking_events",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     });
-    Shipment.hasOne(models.Escrow, { foreignKey: "shipment_id", as: "escrow" });
+    Shipment.hasOne(models.Escrow, {
+      foreignKey: "shipment_id",
+      as: "escrow",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    });
   };
 
   return Shipment;

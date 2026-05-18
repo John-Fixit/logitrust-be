@@ -4,10 +4,20 @@ const { SIZE_TIER_IDS } = require("../domain/shipment/size-tier");
 const createShipmentSchema = Joi.object({
   senderName: Joi.string().min(2).max(120).required(),
   senderPhone: Joi.string().min(7).max(20).required(),
-  pickupAddress: Joi.string().min(5).required(),
+  pickupAddress: Joi.object({
+    id: Joi.string().optional(),
+    name: Joi.string().min(3).required(),
+    lat: Joi.number().required(),
+    long: Joi.number().required(),
+  }).required(),
   recipientName: Joi.string().min(2).max(120).required(),
   recipientPhone: Joi.string().min(7).max(20).required(),
-  deliveryAddress: Joi.string().min(5).required(),
+  deliveryAddress: Joi.object({
+    id: Joi.string().optional(),
+    name: Joi.string().min(3).required(),
+    lat: Joi.number().required(),
+    long: Joi.number().required(),
+  }).required(),
   category: Joi.string().required(),
   sizeTier: Joi.string()
     .valid(...SIZE_TIER_IDS)
