@@ -27,7 +27,12 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Escrow.associate = (models) => {
-    Escrow.belongsTo(models.Shipment, { foreignKey: "shipment_id", as: "shipment" });
+    Escrow.belongsTo(models.Shipment, {
+      foreignKey: "shipment_id",
+      as: "shipment",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    });
   };
 
   return Escrow;
