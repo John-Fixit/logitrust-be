@@ -5,7 +5,13 @@ const db = require("./models");
 const PORT = process.env.PORT || 8002;
 
 const cleanLegacyDuplicateEmailIndexes = async () => {
-  const [indexes] = await db.sequelize.query("SHOW INDEX FROM users");
+  let indexes;
+  try {
+    [indexes] = await db.sequelize.query("SHOW INDEX FROM users");
+  } catch {
+    // Table doesn't exist yet on first boot against a fresh database.
+    return;
+  }
   const duplicateEmailIndexes = indexes
     .map((index) => index.Key_name)
     .filter(

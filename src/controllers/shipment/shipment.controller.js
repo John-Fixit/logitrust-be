@@ -1,5 +1,6 @@
 const ApiResponse = require("../../utils/response");
 const shipmentService = require("../../service/shipmentService");
+const walletService = require("../../service/walletService");
 
 const createShipment = async (req, res) => {
   try {
@@ -58,10 +59,23 @@ const updateShipmentStatus = async (req, res) => {
   }
 };
 
+const releaseShipmentEscrow = async (req, res) => {
+  try {
+    const wallet = await walletService.releaseEscrow(
+      req.user.sub,
+      req.params.trackingCode,
+    );
+    return ApiResponse.success(res, wallet, "Escrow released to rider");
+  } catch (error) {
+    return ApiResponse.error(res, error.message, error.statusCode || 500);
+  }
+};
+
 module.exports = {
   createShipment,
   getMyShipments,
   getShipmentByTrackingCode,
   updateShipmentStatus,
   getShipmentById,
+  releaseShipmentEscrow,
 };

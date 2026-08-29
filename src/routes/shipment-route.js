@@ -6,6 +6,7 @@ const {
   getMyShipments,
   getShipmentByTrackingCode,
   updateShipmentStatus,
+  releaseShipmentEscrow,
 } = require("../controllers/shipment/shipment.controller");
 const {
   createShipmentSchema,
@@ -22,5 +23,6 @@ router.patch(
   validateBody(updateShipmentStatusSchema),
   updateShipmentStatus,
 );
+router.post("/:trackingCode/release", releaseShipmentEscrow);
 
 module.exports = router;

@@ -8,9 +8,11 @@ const notificationRouter = require("./notification-route");
 const disputeRouter = require("./dispute-route");
 const generalRouter = require("./general-route");
 const dashboardRouter = require("./dashboard-route");
+const walletRouter = require("./wallet-route");
 
 router.use("/", generalRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/wallet", walletRouter);
 router.use("/user", userRouter);
 router.use("/auth", authRouter);
 router.use("/shipments", shipmentRouter);

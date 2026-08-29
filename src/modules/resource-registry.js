@@ -1,10 +1,9 @@
+// Money-moving resources (wallets, wallet-transactions, escrow, payments) are
+// deliberately NOT registered here — they have no ownership/role checks or
+// business-rule enforcement in the generic CRUD layer below, which would let
+// any authenticated user mutate arbitrary balances or release escrow. They're
+// served instead through the dedicated, guarded `/api/wallet` routes.
 module.exports = [
-  { path: "wallets", model: "Wallet", label: "wallet" },
-  {
-    path: "wallet-transactions",
-    model: "WalletTransaction",
-    label: "wallet transaction",
-  },
   { path: "shipments", model: "Shipment", label: "shipment" },
   {
     path: "shipment-status-history",
@@ -12,8 +11,6 @@ module.exports = [
     label: "shipment status history",
   },
   { path: "tracking-events", model: "TrackingEvent", label: "tracking event" },
-  { path: "escrow", model: "Escrow", label: "escrow" },
-  { path: "payments", model: "Payment", label: "payment" },
   { path: "riders", model: "Rider", label: "rider" },
   {
     path: "interstate-drivers",

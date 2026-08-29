@@ -1,5 +1,6 @@
 const db = require("../models");
 const shipmentDao = require("../dao/shipmentDao");
+const walletService = require("./walletService");
 const { getRepresentativeWeightKg } = require("../domain/shipment/size-tier");
 const { Op } = require("sequelize");
 
@@ -86,6 +87,33 @@ class ShipmentService {
       );
 
       const escrowAmount = Number(body.value || 0) * 0.03;
+
+      if (!body.is_draft && escrowAmount > 0) {
+        const wallet = await walletService.getWalletForUser(
+          userId,
+          transaction,
+          transaction.LOCK.UPDATE,
+        );
+        if (Number(wallet.balance) < escrowAmount) {
+          const error = new Error(
+            "Insufficient wallet balance to fund escrow for this shipment",
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+        wallet.balance = Number(wallet.balance) - escrowAmount;
+        await wallet.save({ transaction });
+        await db.WalletTransaction.create(
+          {
+            wallet_id: wallet.id,
+            amount: escrowAmount.toFixed(2),
+            type: "debit",
+            reference: `ESCROW-${trackingCode}`,
+          },
+          { transaction },
+        );
+      }
+
       await shipmentDao.createEscrow(
         {
           shipment_id: created.id,
@@ -172,9 +200,10 @@ class ShipmentService {
     if (!shipment) return null;
 
     shipment.status = payload.status;
-    await shipment.save();
 
     await db.sequelize.transaction(async (transaction) => {
+      await shipment.save({ transaction });
+
       await shipmentDao.addStatusHistory(
         {
           shipment_id: shipment.id,
@@ -187,11 +216,16 @@ class ShipmentService {
       await shipmentDao.addTrackingEvent(
         {
           shipment_id: shipment.id,
-          location: payload.location || shipment.dropoff_location,
+          location: payload.location || formatLocationLabel(shipment.dropoff_location),
           event: payload.note || `Status updated to ${payload.status}`,
         },
         transaction,
       );
+
+      if (payload.status === "cancelled") {
+        await walletService.refundEscrowForCancelledShipment(shipment, transaction);
+        await shipment.save({ transaction });
+      }
     });
 
     return this.toUiShipment(shipment);
