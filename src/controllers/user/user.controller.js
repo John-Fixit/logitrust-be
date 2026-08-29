@@ -1,5 +1,6 @@
 const ApiResponse = require("../../utils/response");
 const userDao = require("../../dao/userDao");
+const userService = require("../../service/userService");
 
 const getAllUsers = async (req, res) => {
   try {
@@ -12,6 +13,10 @@ const getAllUsers = async (req, res) => {
 
 const getUserById = async (req, res) => {
   try {
+    const requestedId = Number(req.params.id);
+    if (req.user.role !== "admin" && req.user.sub !== requestedId) {
+      return ApiResponse.forbidden(res, "You do not have access to this profile");
+    }
     const user = await userDao.findById(req.params.id);
     if (!user) return ApiResponse.notFound(res, "User not found");
     return ApiResponse.success(res, user, "User loaded");
@@ -41,9 +46,29 @@ const deleteMyAccount = async (req, res) => {
   }
 };
 
+const getNotificationPreferences = async (req, res) => {
+  try {
+    const prefs = await userService.getNotificationPreferences(req.user.sub);
+    return ApiResponse.success(res, prefs, "Notification preferences loaded");
+  } catch (error) {
+    return ApiResponse.error(res, error.message, error.statusCode || 500);
+  }
+};
+
+const updateNotificationPreferences = async (req, res) => {
+  try {
+    const prefs = await userService.updateNotificationPreferences(req.user.sub, req.body);
+    return ApiResponse.success(res, prefs, "Notification preferences updated");
+  } catch (error) {
+    return ApiResponse.error(res, error.message, error.statusCode || 500);
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   deleteUserById,
   deleteMyAccount,
+  getNotificationPreferences,
+  updateNotificationPreferences,
 };

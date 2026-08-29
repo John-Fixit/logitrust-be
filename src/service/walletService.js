@@ -202,6 +202,118 @@ class WalletService {
 
     shipment.payment_status = "Refunded";
   }
+
+  // -- admin --
+
+  async listWallets() {
+    const wallets = await db.Wallet.findAll({
+      include: [{ model: db.User, as: "user", attributes: ["id", "full_name", "email", "role"] }],
+      order: [["id", "ASC"]],
+    });
+    return wallets.map((w) => {
+      const plain = w.get({ plain: true });
+      return {
+        id: plain.id,
+        balance: Number(plain.balance),
+        user: plain.user
+          ? { id: plain.user.id, fullName: plain.user.full_name, email: plain.user.email, role: plain.user.role }
+          : null,
+      };
+    });
+  }
+
+  async listEscrow(status) {
+    const escrows = await db.Escrow.findAll({
+      where: status ? { status } : {},
+      include: [
+        {
+          model: db.Shipment,
+          as: "shipment",
+          attributes: ["id", "tracking_code", "status", "user_id", "rider_id"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+      limit: 100,
+    });
+    return escrows.map((e) => {
+      const plain = e.get({ plain: true });
+      return {
+        id: plain.id,
+        amount: Number(plain.amount),
+        status: plain.status,
+        releasedAt: plain.released_at,
+        createdAt: plain.created_at,
+        trackingCode: plain.shipment?.tracking_code || null,
+        shipmentStatus: plain.shipment?.status || null,
+      };
+    });
+  }
+
+  /** Admin override: force-release held escrow to the assigned rider regardless of who confirms. */
+  async adminReleaseEscrow(trackingCode) {
+    const shipment = await shipmentDao.findByTrackingCode(trackingCode);
+    if (!shipment) notFound("Shipment not found");
+    if (shipment.status !== "delivered") {
+      badRequest("Shipment must be marked delivered before releasing escrow");
+    }
+
+    await db.sequelize.transaction(async (transaction) => {
+      const escrow = await db.Escrow.findOne({
+        where: { shipment_id: shipment.id, status: "held" },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+      if (!escrow) badRequest("No held escrow found for this shipment");
+
+      const rider = shipment.rider_id
+        ? await db.Rider.findByPk(shipment.rider_id, { transaction })
+        : null;
+      if (!rider || !rider.user_id) {
+        badRequest("No verified rider is linked to a payout wallet for this shipment yet");
+      }
+
+      const riderWallet = await this.getWalletForUser(rider.user_id, transaction, transaction.LOCK.UPDATE);
+      riderWallet.balance = Number(riderWallet.balance) + Number(escrow.amount);
+      await riderWallet.save({ transaction });
+
+      await db.WalletTransaction.create(
+        {
+          wallet_id: riderWallet.id,
+          amount: Number(escrow.amount).toFixed(2),
+          type: "credit",
+          reference: buildWalletReference("PAYOUT"),
+        },
+        { transaction },
+      );
+
+      escrow.status = "released";
+      escrow.released_at = new Date();
+      await escrow.save({ transaction });
+
+      shipment.payment_status = "Released";
+      await shipment.save({ transaction });
+    });
+
+    return this.listEscrow();
+  }
+
+  /** Admin override: force-refund held escrow to the sender (e.g. to resolve a dispute) and cancel the shipment. */
+  async adminRefundEscrow(trackingCode) {
+    const shipment = await shipmentDao.findByTrackingCode(trackingCode);
+    if (!shipment) notFound("Shipment not found");
+
+    await db.sequelize.transaction(async (transaction) => {
+      await this.refundEscrowForCancelledShipment(shipment, transaction);
+      shipment.status = "cancelled";
+      await shipment.save({ transaction });
+      await shipmentDao.addStatusHistory(
+        { shipment_id: shipment.id, status: "cancelled", note: "Refunded by admin" },
+        transaction,
+      );
+    });
+
+    return this.listEscrow();
+  }
 }
 
 module.exports = new WalletService();

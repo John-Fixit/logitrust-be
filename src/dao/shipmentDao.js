@@ -180,6 +180,39 @@ class ShipmentDao {
   createEscrow(payload, transaction) {
     return db.Escrow.create(payload, { transaction });
   }
+
+  /** Admin listing: every non-draft shipment, newest first. */
+  listAll(limit = 100) {
+    return db.Shipment.findAll({
+      where: { is_draft: false },
+      include: [riderInclude],
+      order: [["created_at", "DESC"]],
+      limit,
+    });
+  }
+
+  /** Unassigned, postable jobs for the rider job board. */
+  findAvailableJobs(limit = 50) {
+    return db.Shipment.findAll({
+      where: { is_draft: false, status: "pending", rider_id: null },
+      order: [["created_at", "ASC"]],
+      limit,
+    });
+  }
+
+  /** Jobs assigned to a given rider, optionally filtered by status. */
+  findJobsForRider(riderId, { statusIn, limit = 50 } = {}) {
+    return db.Shipment.findAll({
+      where: {
+        is_draft: false,
+        rider_id: riderId,
+        ...(statusIn ? { status: { [Op.in]: statusIn } } : {}),
+      },
+      include: [riderInclude],
+      order: [["created_at", "DESC"]],
+      limit,
+    });
+  }
 }
 
 module.exports = new ShipmentDao();

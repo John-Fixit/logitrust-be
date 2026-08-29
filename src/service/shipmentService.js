@@ -13,6 +13,7 @@ const buildTrackingCode = () => {
 const normalizeStatusForUi = (status) => {
   if (status === "in_transit") return "In Transit";
   if (status === "delivered") return "Delivered";
+  if (status === "cancelled") return "Cancelled";
   return "Pending";
 };
 
@@ -195,37 +196,133 @@ class ShipmentService {
     };
   }
 
-  async updateStatus(trackingCode, payload) {
+  async _writeStatusChange(shipment, payload, transaction) {
+    shipment.status = payload.status;
+    await shipment.save({ transaction });
+
+    await shipmentDao.addStatusHistory(
+      {
+        shipment_id: shipment.id,
+        status: payload.status,
+        note: payload.note || "",
+      },
+      transaction,
+    );
+
+    await shipmentDao.addTrackingEvent(
+      {
+        shipment_id: shipment.id,
+        location: payload.location || formatLocationLabel(shipment.dropoff_location),
+        event: payload.note || `Status updated to ${payload.status}`,
+      },
+      transaction,
+    );
+  }
+
+  /**
+   * Sender-initiated cancellation. Riders progress a shipment through
+   * in_transit/delivered via `updateStatusAsRider` instead — this endpoint
+   * only ever accepts "cancelled", and only before a rider has picked it up.
+   */
+  async updateStatus(userId, trackingCode, payload) {
     const shipment = await shipmentDao.findByTrackingCode(trackingCode);
     if (!shipment) return null;
 
-    shipment.status = payload.status;
+    if (shipment.user_id !== userId) {
+      const error = new Error("You do not have access to this shipment");
+      error.statusCode = 403;
+      throw error;
+    }
+    if (payload.status !== "cancelled") {
+      const error = new Error(
+        "Only cancellation is supported here; delivery progress is updated by the assigned rider",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+    if (shipment.status !== "pending" || shipment.rider_id) {
+      const error = new Error(
+        "Shipment can only be cancelled before a rider has accepted it",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
 
     await db.sequelize.transaction(async (transaction) => {
+      await this._writeStatusChange(shipment, payload, transaction);
+      await walletService.refundEscrowForCancelledShipment(shipment, transaction);
+      await shipment.save({ transaction });
+    });
+
+    return this.toUiShipment(shipment);
+  }
+
+  /**
+   * Rider-initiated progress update. Only the assigned rider may call this,
+   * and only in forward order: pending (assigned) -> in_transit -> delivered.
+   */
+  async updateStatusAsRider(riderId, trackingCode, payload) {
+    const shipment = await shipmentDao.findByTrackingCode(trackingCode);
+    if (!shipment) return null;
+
+    if (shipment.rider_id !== riderId) {
+      const error = new Error("This job is not assigned to you");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const nextStatusFor = { pending: "in_transit", in_transit: "delivered" };
+    if (nextStatusFor[shipment.status] !== payload.status) {
+      const error = new Error(
+        `Shipment is currently "${shipment.status}" and cannot move directly to "${payload.status}"`,
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await db.sequelize.transaction(async (transaction) => {
+      await this._writeStatusChange(shipment, payload, transaction);
+    });
+
+    return this.toUiShipment(shipment);
+  }
+
+  async listAvailableJobs() {
+    const shipments = await shipmentDao.findAvailableJobs();
+    return shipments.map((shipment) => this.toUiShipment(shipment));
+  }
+
+  async listJobsForRider(riderId, statusIn) {
+    const shipments = await shipmentDao.findJobsForRider(riderId, { statusIn });
+    return shipments.map((shipment) => this.toUiShipment(shipment));
+  }
+
+  async acceptJob(riderId, trackingCode) {
+    const shipment = await shipmentDao.findByTrackingCode(trackingCode);
+    if (!shipment) return null;
+
+    if (shipment.is_draft || shipment.status !== "pending" || shipment.rider_id) {
+      const error = new Error("This job is no longer available");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    await db.sequelize.transaction(async (transaction) => {
+      shipment.rider_id = riderId;
       await shipment.save({ transaction });
 
       await shipmentDao.addStatusHistory(
-        {
-          shipment_id: shipment.id,
-          status: payload.status,
-          note: payload.note || "",
-        },
+        { shipment_id: shipment.id, status: shipment.status, note: "Rider assigned" },
         transaction,
       );
-
       await shipmentDao.addTrackingEvent(
         {
           shipment_id: shipment.id,
-          location: payload.location || formatLocationLabel(shipment.dropoff_location),
-          event: payload.note || `Status updated to ${payload.status}`,
+          location: formatLocationLabel(shipment.pickup_location),
+          event: "Rider accepted this delivery",
         },
         transaction,
       );
-
-      if (payload.status === "cancelled") {
-        await walletService.refundEscrowForCancelledShipment(shipment, transaction);
-        await shipment.save({ transaction });
-      }
     });
 
     return this.toUiShipment(shipment);

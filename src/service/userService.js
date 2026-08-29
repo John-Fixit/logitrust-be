@@ -296,6 +296,33 @@ class UserService {
     }
     return user;
   }
+
+  toNotificationPreferences(user) {
+    return {
+      emailEnabled: Boolean(user.notify_email),
+      pushEnabled: Boolean(user.notify_push),
+      inAppEnabled: Boolean(user.notify_in_app),
+    };
+  }
+
+  async getNotificationPreferences(userId) {
+    const user = await this.getProfile(userId);
+    return this.toNotificationPreferences(user);
+  }
+
+  async updateNotificationPreferences(userId, payload) {
+    const user = await userDao.updateById(userId, {
+      notify_email: Boolean(payload.emailEnabled),
+      notify_push: Boolean(payload.pushEnabled),
+      notify_in_app: Boolean(payload.inAppEnabled),
+    });
+    if (!user) {
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      throw error;
+    }
+    return this.toNotificationPreferences(user);
+  }
 }
 
 module.exports = new UserService();

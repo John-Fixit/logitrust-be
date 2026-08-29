@@ -49,6 +49,7 @@ const getShipmentById = async (req, res) => {
 const updateShipmentStatus = async (req, res) => {
   try {
     const shipment = await shipmentService.updateStatus(
+      req.user.sub,
       req.params.trackingCode,
       req.body,
     );

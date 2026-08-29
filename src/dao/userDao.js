@@ -7,14 +7,14 @@ class UserDao {
 
   async findById(id) {
     return db.User.findByPk(id, {
-      attributes: { exclude: ["password_hash"] },
+      attributes: { exclude: ["password_hash", "verification_token", "verification_token_expires_at"] },
     });
   }
 
   async findByEmail(email) {
     return db.User.findOne({
       where: { email },
-      attributes: { exclude: ["password_hash"] },
+      attributes: { exclude: ["password_hash", "verification_token", "verification_token_expires_at"] },
     });
   }
 
@@ -73,7 +73,7 @@ class UserDao {
 
   async findAll() {
     return db.User.findAll({
-      attributes: { exclude: ["password_hash"] },
+      attributes: { exclude: ["password_hash", "verification_token", "verification_token_expires_at"] },
     });
   }
 

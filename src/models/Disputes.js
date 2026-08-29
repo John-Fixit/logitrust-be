@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      delivery_id: { type: DataTypes.UUID, allowNull: false },
+      shipment_id: { type: DataTypes.UUID, allowNull: false },
       reason: { type: DataTypes.TEXT, allowNull: false },
       status: { type: DataTypes.STRING, allowNull: false, defaultValue: "open" },
       admin_note: { type: DataTypes.TEXT, allowNull: true },
@@ -27,9 +27,9 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Dispute.associate = (models) => {
-    Dispute.belongsTo(models.Delivery, {
-      foreignKey: "delivery_id",
-      as: "delivery",
+    Dispute.belongsTo(models.Shipment, {
+      foreignKey: "shipment_id",
+      as: "shipment",
     });
   };
 

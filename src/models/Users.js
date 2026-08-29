@@ -39,6 +39,9 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      notify_email: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+      notify_push: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+      notify_in_app: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -60,18 +63,6 @@ module.exports = (sequelize, DataTypes) => {
     });
     User.hasMany(models.Shipment, { foreignKey: "user_id", as: "shipments" });
     User.hasMany(models.Payment, { foreignKey: "user_id", as: "payments" });
-    User.hasMany(models.Delivery, {
-      foreignKey: "sender_id",
-      as: "sent_deliveries",
-    });
-    User.hasMany(models.Rating, {
-      foreignKey: "from_user_id",
-      as: "ratings_given",
-    });
-    User.hasMany(models.Rating, {
-      foreignKey: "to_user_id",
-      as: "ratings_received",
-    });
     User.hasMany(models.UserIdentity, {
       foreignKey: "user_id",
       as: "identities",

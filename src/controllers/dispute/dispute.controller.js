@@ -3,7 +3,7 @@ const disputeService = require("../../service/disputeService");
 
 const getDisputes = async (req, res) => {
   try {
-    const disputes = await disputeService.listDisputes();
+    const disputes = await disputeService.listDisputesForUser(req.user.sub);
     return ApiResponse.success(res, disputes, "Disputes loaded");
   } catch (error) {
     return ApiResponse.error(res, error.message, error.statusCode || 500);
@@ -12,7 +12,7 @@ const getDisputes = async (req, res) => {
 
 const createDispute = async (req, res) => {
   try {
-    const dispute = await disputeService.createDispute(req.body);
+    const dispute = await disputeService.createDispute(req.user.sub, req.body);
     return ApiResponse.success(res, dispute, "Dispute created", 201);
   } catch (error) {
     return ApiResponse.error(res, error.message, error.statusCode || 500);
